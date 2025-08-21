@@ -4,23 +4,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file
 load_dotenv()
-
-# Vercel requires the Flask app to be named 'app'
 app = Flask(__name__)
 CORS(app) 
 
 def get_persona():
-    """Reads the persona from persona.txt file."""
+    """Reads the persona from the persona.txt file in the root directory."""
     try:
-        # Construct path relative to this script
-        script_dir = os.path.dirname(__file__)
-        file_path = os.path.join(script_dir, '..', 'persona.txt')
-        with open(file_path, 'r', encoding='utf-8') as f:
+        # In Vercel, the working directory is the root of the project.
+        with open('persona.txt', 'r', encoding='utf-8') as f:
             return f.read().strip()
     except FileNotFoundError:
-        return "You are a helpful assistant."
+        return "You are a helpful assistant. The persona.txt file was not found."
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -50,8 +45,6 @@ def chat():
                     {"role": "user", "content": user_message}
                 ]
             },
-            # --- THIS IS THE FIX ---
-            # Add a timeout of 9 seconds to prevent Vercel's function from timing out.
             timeout=9
         )
         
@@ -59,7 +52,6 @@ def chat():
         return jsonify(response.json()['choices'][0]['message'])
 
     except requests.exceptions.Timeout:
-        # Specifically catch the timeout error
         return jsonify({"error": "The request to the AI model timed out. Please try again."}), 504
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"API request failed: {str(e)}"}), 502
